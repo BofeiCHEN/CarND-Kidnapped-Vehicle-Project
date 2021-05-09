@@ -46,6 +46,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
     particle.weight = 1;
     particles.push_back(particle);
   }
+  is_initialized = true;
 }
 
 void ParticleFilter::prediction(double delta_t, double std_pos[], 
@@ -60,14 +61,13 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
   for(int i=0; i<num_particles; i++){
 
     std::default_random_engine gen;
-    
-    
+        
     double x_f, y_f, theta_f;
     double x_0 = particles[i].x;
     double y_0 = particles[i].y;
     double yaw_0 = particles[i].theta;
     double delta_yaw = yaw_rate*delta_t;
-    
+
     if(abs(yaw_rate) < 0.000001){
       x_f = x_0 + velocity*cos(yaw_0);
       y_f = y_0 + velocity*sin(yaw_0);
@@ -117,7 +117,63 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
    *   and the following is a good resource for the actual equation to implement
    *   (look at equation 3.33) http://planning.cs.uiuc.edu/node99.html
    */
+  for(int i=0; i<num_particles; i++){
+    //Transform, observations VEH(Particle) -> MAP
+    double x_p = particles[i].x;
+    double y_p = particles[i].y;
+    double theta_p = particles[i].theta;
 
+
+    vector<int> associations;
+    vector<double> sense_x;
+    vector<double> sense_y;
+    double weight_obs = 1.0;
+    for(int j=0; j<observations.size(); j++){
+      double min_dis = -1;
+      double x_obs = observations[j].x;
+      double y_obs = observations[j].y;
+
+      double x_obs_map = x_obs*cos(theta_p) - y_p*sin(theta_p) + x_p;
+      double y_obs_map = x_obs*sin(theta_p) + y_p*cos(theta_p) + y_p;
+
+      // find the association for j-th observation
+      int association;
+      double x_association, y_association;
+      for(int k=0; k<map_landmarks.landmark_list.size(); k++){
+        double x_landmark = map_landmarks.landmark_list[k].x_f;
+        double y_landmark = map_landmarks.landmark_list[k].y_f;
+        double dis = sqrt(pow(x_obs_map - x_landmark, 2) 
+                        + pow(y_obs_map - y_landmark, 2));
+
+        if((min_dis < 0) || (min_dis > dis)){
+          min_dis = dis;
+          association = map_landmarks.landmark_list[k].id_i;
+          x_association = x_landmark;
+          y_association = y_landmark;
+        }
+      }
+
+      // asign one landmark
+      associations.push_back(association);
+      sense_x.push_back(x_association);
+      sense_y.push_back(y_association);
+
+      //get weight for j-th observation
+      double std_x = std_landmark[0];
+      double std_y = std_landmark[1];
+
+      double gauss_norm = 1/(2*M_PI*std_x*std_y);
+      double exponent = (pow(x_obs - x_association, 2) / (2 * pow(std_x, 2)))
+                       + (pow(y_obs - y_association, 2) / (2 * pow(std_y, 2)));
+      weight_obs *= gauss_norm * exp(-exponent);
+    }
+
+    //Associate observation landmark <-> map landmark
+    SetAssociations(particles[i], associations, sense_x, sense_y);
+
+    //Update weights
+    particles[i].weight = weight_obs;
+  }
 }
 
 void ParticleFilter::resample() {
