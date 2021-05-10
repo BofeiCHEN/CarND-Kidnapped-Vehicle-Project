@@ -25,8 +25,14 @@ string hasData(string s) {
   return "";
 }
 
-int main() {
+int main(int argc, char *argv[]) {
   uWS::Hub h;
+
+  // one brief code for get particale number from input
+  int number = 100;
+  if(2 == argc){
+    number = atoi(argv[1]);
+  }
 
   // Set up parameters here
   double delta_t = 0.1;  // Time elapsed between measurements [sec]
@@ -45,7 +51,7 @@ int main() {
   }
 
   // Create particle filter
-  ParticleFilter pf;
+  ParticleFilter pf(number);
 
   h.onMessage([&pf,&map,&delta_t,&sensor_range,&sigma_pos,&sigma_landmark]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, 

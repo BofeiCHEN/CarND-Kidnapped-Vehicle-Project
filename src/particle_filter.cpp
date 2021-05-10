@@ -31,7 +31,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
    * NOTE: Consult particle_filter.h for more information about this method 
    *   (and others in this file).
    */
-  num_particles = 2000;  // TODO: Set the number of particles
+  //num_particles = number;  // Move to main.cpp, read input from command line, default=100; TODO: Set the number of particles
   std::default_random_engine gen;
   normal_distribution<double> dist_x(x, std[0]);
   normal_distribution<double> dist_y(y, std[1]);
@@ -128,7 +128,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     vector<int> associations;
     vector<double> sense_x;
     vector<double> sense_y;
-    double weight_particle= 1.0;
+    double weight_particle = 1.0;
     for(int j=0; j<observations.size(); j++){
       double min_dis = -1;
       double x_obs = observations[j].x;
